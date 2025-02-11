@@ -26,7 +26,7 @@ public:
     float get_input(size_t i, size_t j);
     float get_output(size_t i, size_t j);
 
-protected:
+public:
     void pop_samples_from_buffer(RingBuffer& input, AudioBufferF& output);
 
     void pop_samples_from_buffer(RingBuffer& input, AudioBufferF& output, size_t num_new_samples, size_t num_old_samples);
