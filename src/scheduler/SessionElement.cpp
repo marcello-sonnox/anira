@@ -26,24 +26,18 @@ void SessionElement::clear() {
 void SessionElement::prepare(HostAudioConfig new_config) {
     m_host_config = new_config;
 
-    m_send_buffer.initialize_with_positions(m_inference_config.m_num_audio_channels[Input], (size_t) m_host_config.m_host_sample_rate * 50); // TODO find appropriate size dynamically
-    m_receive_buffer.initialize_with_positions(m_inference_config.m_num_audio_channels[Output], (size_t) m_host_config.m_host_sample_rate * 50); // TODO find appropriate size dynamically
+    // TODO: forcing init until we find a better way
+    // @ANIRA: should allow for overwriting the maxSecs and maxStructs ?
+    
+    int maxSecs = 20;
+    int maxStructs = 20;
+    
+    m_send_buffer.initialize_with_positions(m_inference_config.m_num_audio_channels[Input], (size_t) m_host_config.m_host_sample_rate * maxSecs); // 20 secs
+    m_receive_buffer.initialize_with_positions(m_inference_config.m_num_audio_channels[Output], (size_t) m_host_config.m_host_sample_rate * maxSecs); // 20 secs
 
-    // Now calculate the number of structs necessary to keep the inference queues filled
-    size_t max_inference_time_in_samples = (size_t) std::ceil(m_inference_config.m_max_inference_time * m_host_config.m_host_sample_rate / 1000);
-    int new_samples_needed_for_inference = m_inference_config.m_output_sizes[m_inference_config.m_index_audio_data[Output]] / m_inference_config.m_num_audio_channels[Output];
-    float structs_per_buffer = std::ceil((float) m_host_config.m_host_buffer_size / (float) new_samples_needed_for_inference);
-    float structs_per_max_inference_time = std::ceil((float) max_inference_time_in_samples / (float) new_samples_needed_for_inference);
-    // ceil to full buffers
-    structs_per_max_inference_time = std::ceil(structs_per_max_inference_time/structs_per_buffer) * structs_per_buffer;
-    // we can have multiple max_inference_times per buffer
-    float max_inference_times_per_buffer = std::max(std::floor((float) m_host_config.m_host_buffer_size / (float) (max_inference_time_in_samples)), 1.f);
-    // minimum number of structs necessary to keep available inference queues where the ringbuffer can push to if we have n_free_threads > structs_per_buffer
-    // int n_structs = (int) (structs_per_buffer + structs_per_max_inference_time);
-    // but because we can have multiple instances (sessions) that use the same threadpool, we have to multiply structs_per_max_inference_time with the struct_per_buffer
-    // because each struct can take max_inference_time time to process and be free again
-    int n_structs = (int) (structs_per_buffer + structs_per_max_inference_time * std::ceil(structs_per_buffer/max_inference_times_per_buffer));
-
+    // Compute the queue size: ensure enough structures to handle hits considering thread count and processing time?
+    size_t n_structs = maxStructs;
+    
     // How big are the input and output buffers
     size_t num_input_samples = m_inference_config.m_input_sizes[m_inference_config.m_index_audio_data[Input]] / m_inference_config.m_num_audio_channels[Input];
     size_t num_output_samples = m_inference_config.m_output_sizes[m_inference_config.m_index_audio_data[Output]] / m_inference_config.m_num_audio_channels[Output];
